@@ -1,85 +1,39 @@
-Overstock Transaction & Inventory Reconciliation Query
+# Overstock Inventory Reconciliation Project
 
-The Challenge 🎯
+![SQL](https://img.shields.io/badge/Language-Oracle_SQL-orange) ![Data Engineering](https://img.shields.io/badge/Focus-Data_Engineering_%26_ETL-blue) ![Impact](https://img.shields.io/badge/Impact-100%25_Accuracy_Restored-green)
 
-The Overstock department's main report for tracking booked items was inaccurate. This "data drift" made it impossible to trust our stock levels and led to discrepancies in our inventory. The root cause was unknown, but it was clear the system was failing to record certain types of transactions.
+## 📋 Executive Summary
+This project addresses a critical "data drift" issue in the Overstock department's inventory tracking system. The solution involves a complex SQL algorithm designed to reconcile transaction logs by stitching together disjointed "booking out" and "booking in" events. The resulting query restored **100% accuracy** to the inventory reports and was subsequently adopted by the TGW team as the standard for stock level validation.
 
-The Solution 🛠️
+---
 
-After investigating, I discovered the old report completely ignored "dummy item" barcodes. To fix this, I created this new SQL query from scratch.
+## 🧐 The Business Challenge
+The Overstock department relied on a legacy report to track inventory movements that suffered from significant data discrepancies:
+* **Data Drift:** The legacy reporting system was failing to record specific transaction types, leading to a growing gap between physical stock and digital records.
+* **Black Box Logic:** The root cause was initially unknown, making the stock levels untrustworthy for operational planning.
+* **Missing "Dummy" Items:** Investigation revealed that the system completely ignored "dummy item" barcodes (temporary placeholders), causing inventory to vanish from the logs.
 
-The solution identifies both standard items and the missing dummy items by tracking their complete journey—from the moment they are booked out (MENGE < 0) to the moment they are booked in (MENGE = 1).
+## 🛠️ The Data Engineering Solution
+To solve this, I reverse-engineered the transaction flow and built a robust SQL solution from scratch. The core logic tracks the **complete lifecycle** of an item, identifying when it leaves a location (`MENGE < 0`) and matching it to its arrival at the destination (`MENGE = 1`).
 
-The Impact ✨
+### Key Technical Implementations
+1.  **Complex Logic Decomposition (CTEs):** Instead of a monolithic query, I used Common Table Expressions to separate "Normal Goods" logic from "Dummy Goods" logic, improving readability and maintainability.
+2.  **Semi-Structured Data Parsing (JSON):** The source system stored critical metadata (SKU, Quality, Categories) inside a JSON CLOB column (`CUST_DATA`). I utilized `JSON_VALUE` to extract and normalize this data into tabular columns.
+3.  **Advanced Joining & Filtering:** The query performs a self-join on the `LOCAL_TRANSACTION_ID` to stitch the start and end of a transaction, ensuring that we only report on completed inventory movements.
+4.  **Data Cleaning & Normalization:** Implemented `DECODE` and `CASE` statements to translate internal system codes (e.g., `QualityID: 1`) into human-readable business terms (e.g., `Grade A`).
 
-This new query immediately resolved the reporting errors and restored 100% accuracy to the booking log. The Overstock team now has a reliable tool they can trust, which has corrected inventory data from previous periods and ensures precise stock levels moving forward.
+---
 
-How It Works
+## 🚀 Impact & Results
+* **100% Accuracy Restored:** The new logic captured the previously missing "dummy" transactions, eliminating the data drift.
+* **Cross-Team Adoption:** The solution was verified and subsequently implemented by the TGW (Technical) team as the primary source of truth for Overstock booking.
+* **Historical Correction:** The query allowed the business to retroactively correct inventory data from previous periods.
 
-Instead of one massive, complex query, the logic is broken into simple, understandable building blocks using Common Table Expressions (CTEs).
+---
 
-Find "Normal" Items:
+## 💻 The SQL Logic
 
-normal_goods_t1: Finds "booking out" transactions.
-
-TPARTNR = 520 AND MENGE < 0
-
-
-normal_goods_t2: Finds "booking in" completions.
-
-TPARTNR = 520 AND MENGE = 1
-
-
-Find "Dummy" Items:
-
-dummy_goods_t1: Finds the "dummy" item "booking out" transactions that were being missed.
-
-TPARTNR = 614 AND MENGE < 0
-
-
-dummy_goods_t2: Finds the dummy item completions.
-
-TPARTNR = 207 AND MENGE = 1
-
-
-Stitch Them Together:
-
-The query uses a LEFT JOIN on the LOCAL_TRANSACTION_ID to match the "booking out" (t1) record with its "booking in" (t2) record for both normal and dummy flows.
-
-Combine & Clean:
-
-A UNION ALL merges the "normal" and "dummy" results into one complete list.
-
-The final SELECT cleans up the data, translating internal codes from the CUST_DATA JSON into human-readable text.
-
--- Example of cleaning up JSON data
-DECODE(JSON_VALUE(ag.CUST_DATA, '$.QUALITYID_SEKTOR'),
-  '1', 'A',
-  '2', 'B',
-  'Unknown'
-) AS Quality
-
-
-Key Business Logic
-
-SKU & SORT_ID Source: The logic for NORMAL vs. DUMMY goods is different:
-
-For NORMAL goods, the SKU is pulled from the initial t1 record's JSON.
-
-For DUMMY goods, the SKU is pulled from the completion t2 record's JSON.
-
-CASE
-  WHEN ag.good_type = 'NORMAL' THEN JSON_VALUE(ag.CUST_DATA, '$.SKU_ART')
-  WHEN ag.good_type = 'DUMMY' THEN JSON_VALUE(ag.t2_cust_data, '$.SKU_ART')
-END AS SKU
-
-
-Final Filters: The query cleans the final list by:
-
-Removing self-to-self transactions (where source and destination are the same).
-
-Ensuring the final destination LHM is a valid number.
-
-WHERE
-  NVL(ag.Source_LHM, 'value1') <> NVL(ag.ZIEL_LHM, 'value2')
-  AND REGEXP_LIKE(ag.ZIEL_LHM, '^[0-9]+$');
+### Logic Breakdown
+1.  **`normal_goods_t1` & `t2`**: Captures standard items leaving (t1) and arriving (t2).
+2.  **`dummy_goods_t1` & `t2`**: Captures "dummy" items. **Crucial Logic:** For dummy items, the actual SKU is often only available in the completion record (t2), requiring a dynamic extraction strategy.
+3.  **Union & Clean**: Merges both streams and applies business-readable formatting.
