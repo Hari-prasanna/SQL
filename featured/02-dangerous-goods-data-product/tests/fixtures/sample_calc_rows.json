@@ -1,0 +1,12 @@
+{
+    "_comment": "Synthetic stand-in for worksheet.get_all_values() on the 'DG Stocks' calc tab. Column letters map to positions used by compute_volumes(): B (index 1, location-type prefix), F (index 5, category), L (index 11, volume), O (index 14, code prefix). See ../../docs/data-contract.md.",
+    "header": ["COL_A", "COL_B", "COL_C", "COL_D", "COL_E", "COL_F", "COL_G", "COL_H", "COL_I", "COL_J", "COL_K", "COL_L", "COL_M", "COL_N", "COL_O"],
+    "rows": [
+        ["1", "WH01",   "x", "x", "x", "OUTLET",  "x", "x", "x", "x", "x", "1,200", "x", "x", "500123"],
+        ["2", "OLAP-1", "x", "x", "x", "OUTLET",  "x", "x", "x", "x", "x", "300",   "x", "x", "500999"],
+        ["3", "WH03",   "x", "x", "x", "STORAGE", "x", "x", "x", "x", "x", "500",   "x", "x", "501111"],
+        ["4", "FIN-9",  "x", "x", "x", "OUTLET",  "x", "x", "x", "x", "x", "200",   "x", "x", "502222"],
+        ["5", "WH05",   "x", "x", "x", "OUTLET",  "x", "x", "x", "x", "x", "150",   "x", "x", "410999"],
+        ["6", "WH02",   "x", "x", "x", "OUTLET",  "x", "x", "x", "x", "x", "800",   "x", "x", "502"]
+    ]
+}

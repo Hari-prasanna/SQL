@@ -1,0 +1,32 @@
+name: lint-and-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install shared package
+        run: pip install -e "./shared/logistics_data_utils[dev]"
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run tests
+        run: pytest

@@ -1,5 +1,0 @@
-pandas
-gspread
-oracledb
-SQLAlchemy
-pytz
