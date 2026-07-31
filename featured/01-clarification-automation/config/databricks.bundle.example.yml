@@ -1,0 +1,98 @@
+# Public-safe Databricks Asset Bundle template.
+# The operational version of this job runs under a named workspace user
+# (email_notifications / run_as) because a dedicated service principal was not
+# available on that workspace. This template makes the run identity configurable
+# instead of shipping a real default — see ../docs/decisions.md.
+#
+# Copy to `databricks.yml`, fill in the bundle variables below (or set them via
+# `--var` / a `.databricks/bundle.yml` override), then `databricks bundle deploy`.
+
+bundle:
+  name: clarification_automation
+
+variables:
+  workspace_host:
+    description: "Databricks workspace URL, e.g. https://<workspace>.cloud.databricks.com"
+  run_as_user:
+    description: "Principal to notify on failure and (ideally) a service principal to run as"
+  secret_scope:
+    description: "Databricks secret scope holding google_auth / oracle_auth / chat_webhook_url"
+  cluster_policy_id:
+    description: "Cluster policy ID for the job cluster (optional, workspace-specific)"
+
+resources:
+  jobs:
+    clarification_automation:
+      name: clarification_automation
+
+      email_notifications:
+        on_failure:
+          - ${var.run_as_user}
+
+      schedule:
+        quartz_cron_expression: "0 0 12 ? * MON-FRI" # placeholder — twice-daily on weekdays in production
+        timezone_id: "Europe/Berlin"
+        pause_status: "PAUSED"
+
+      job_clusters:
+        - job_cluster_key: job_cluster
+          new_cluster:
+            spark_version: 17.3.x-scala2.13
+            policy_id: ${var.cluster_policy_id}
+            node_type_id: m6gd.large
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+
+      tasks:
+        - task_key: clarification_bookings_task
+          job_cluster_key: job_cluster
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          spark_python_task:
+            python_file: ../src/clarification_bookings.py
+          libraries:
+            - pypi:
+                package: oracledb==2.1.2
+            - pypi:
+                package: gspread==6.1.0
+            - pypi:
+                package: sqlalchemy==2.0.25
+            - pypi:
+                package: pytz
+            # - whl: ../../shared/logistics_data_utils/dist/logistics_data_utils-*.whl
+
+        - task_key: backlog_clarification_webhook_task
+          job_cluster_key: job_cluster
+          depends_on:
+            - task_key: clarification_bookings_task
+          max_retries: 0
+          spark_python_task:
+            python_file: ../src/backlog_clarification_webhook.py
+          libraries:
+            - pypi:
+                package: oracledb==2.1.2
+            - pypi:
+                package: sqlalchemy==2.0.25
+            - pypi:
+                package: pytz
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      name_prefix: "[dev ${workspace.current_user.short_name}] "
+    workspace:
+      host: ${var.workspace_host}
+
+  prod:
+    mode: production
+    workspace:
+      host: ${var.workspace_host}
+    run_as:
+      user_name: ${var.run_as_user} # replace with a service principal in a real deployment target

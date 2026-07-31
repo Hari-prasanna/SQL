@@ -1,0 +1,82 @@
+# Public-safe Databricks Asset Bundle template.
+# The operational version of this job runs under a named workspace user
+# (email_notifications / run_as) because a dedicated service principal was not
+# available on that workspace. This template makes the run identity configurable
+# instead of shipping a real default — see ../docs/decisions.md.
+#
+# Unlike featured/01's bundle template, this job's tasks are plain
+# `notebook_task` entries with no `job_clusters`/cluster-policy block. That
+# matches the original deployment, which had no explicit cluster spec in its
+# `databricks.yml` — it ran on workspace default/serverless notebook compute
+# rather than a dedicated job cluster. No cluster_policy_id variable is defined
+# here for that reason; see ../docs/decisions.md.
+#
+# Copy to `databricks.yml`, fill in the bundle variables below (or set them via
+# `--var` / a `.databricks/bundle.yml` override), then `databricks bundle deploy`.
+# The job also expects a SECRET_SCOPE environment variable at runtime (see
+# ../src/etl_pipeline.py and ../src/notification_sender.py) — set it in the
+# cluster/task environment, not in this file.
+
+bundle:
+  name: dangerous_goods_data_product
+
+variables:
+  workspace_host:
+    description: "Databricks workspace URL, e.g. https://<workspace>.cloud.databricks.com"
+  run_as_user:
+    description: "Principal to notify on failure and (ideally) a service principal to run as"
+  secret_scope:
+    description: "Databricks secret scope holding google_auth / oracle_auth / chat_webhook_url"
+
+resources:
+  jobs:
+    dangerous_goods_data_product:
+      name: dangerous_goods_data_product
+
+      email_notifications:
+        on_failure:
+          - ${var.run_as_user}
+
+      schedule:
+        quartz_cron_expression: "0 0 6 ? * MON-FRI" # placeholder — production runs twice on weekday mornings/early afternoons
+        timezone_id: "Europe/Berlin"
+        pause_status: "PAUSED"
+
+      tasks:
+        - task_key: ETL_Task
+          notebook_task:
+            notebook_path: ../src/etl_pipeline.py
+            base_parameters:
+              category: "Beauty"
+
+        - task_key: Notify_Task
+          depends_on:
+            - task_key: ETL_Task
+              # IMPORTANT: the original job omitted `run_if` here, which defaults
+              # to ALL_SUCCESS in Databricks Jobs — meaning Notify_Task (the only
+              # task with failure-alerting logic) would not run at all if
+              # ETL_Task failed. ALL_DONE is set explicitly here so the failure
+              # card in notification_sender.py is actually reachable. See
+              # ../docs/failure-and-recovery.md for how this gap was found.
+              run_if: ALL_DONE
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/notification_sender.py
+            base_parameters:
+              previous_task_name: ETL_Task
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      name_prefix: "[dev ${workspace.current_user.short_name}] "
+    workspace:
+      host: ${var.workspace_host}
+
+  prod:
+    mode: production
+    workspace:
+      host: ${var.workspace_host}
+    run_as:
+      user_name: ${var.run_as_user} # replace with a service principal in a real deployment target

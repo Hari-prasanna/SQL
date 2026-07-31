@@ -1,79 +1,35 @@
-# work-prod-projects
+# Logistics Data & Automation Case Studies
 
-Automation work built for the **LUU (Ludwigsfelde) logistics
-site at Zalando** — production Databricks pipelines, Oracle SQL reconciliation
-logic, and Google Workspace automations.
+Sanitized case studies based on operational logistics problems solved using SQL,
+Python, Databricks, dashboards, and workflow automation.
 
-Each project is self-contained and has its own README with setup, configuration,
-and run/deploy instructions. This top-level file explains how the repository is
-organised and the conventions every project follows.
+All company names, internal identifiers, infrastructure details, credentials,
+URLs, table names, and operational codes have been removed or replaced.
+This repository demonstrates engineering decisions and validation methods;
+it is not a deployable copy of an employer system.
 
-## Repository layout
+## Featured Projects
 
-```
-work-prod-projects/
-├── prod-projects/                      
-│   ├── databricks-pipelines/           
-│   │   ├── dbricks-utils/             
-│   │   ├── oracle-to-looker-etl/       
-│   │   ├── realtime-data-stream/      
-│   │   ├── receive-booking-monthly-backup/  
-│   │   ├── receive-uph-kpis/            
-│   │   ├── shift-report-daily-update/   
-│   │   └── outet-booking/             
-│   ├── inventory-reconciliation-sql/    
-│   ├── sql-kitchen/                     
-│   └── looker-reporting-etl/            
-└── internal-team-projects/             
-    ├── kaizando-automation-appscript/   
-    └── order-duration-efficiency-analysis/  
-```
+| Project | Business problem | Solution | Measured impact | Primary hiring signal |
+|---|---|---|---|---|
+| [Clarification Case Automation](featured/01-clarification-automation/) | Employees double-logged inventory clarification work in both a WMS and a spreadsheet | Oracle/WMS made the source of truth; idempotent scheduled sync with a late-data recovery window | ~90% less manual entry (operator-reported, see project docs) | Designing idempotent, recoverable data pipelines around a system of record |
+| [Dangerous-Goods Data Product](featured/02-dangerous-goods-data-product/) | A compliance-critical stock report was built by hand from a large manual export | Parameterized Oracle extract, automated cleaning/classification, scheduled refresh feeding a dashboard | ~100 minutes/day of manual work removed (operator-reported) | Turning a manual compliance report into a monitored data product |
+| [Order-Flow Bottleneck Analysis](featured/03-order-flow-bottleneck-analysis/) | Suspected background transport traffic was slowing order fulfilment, with no data to confirm it | Joined 3 event sources to measure wait time, processing time, and concurrent transport load | Evidence used to justify a warehouse-control-system prioritisation change (correlational, not causal — see project docs) | Turning an operational hypothesis into a rigorous, honestly-scoped data analysis |
 
-## Project index
+## Also in this repository
 
-| Project | Stack | What it does |
-| :--- | :--- | :--- |
-| [oracle-to-looker-etl](prod-projects/databricks-pipelines/oracle-to-looker-etl) | Python, Pandas, SQLAlchemy, Databricks | Pulls dangerous-goods stock from Oracle, cleans it, writes to Google Sheets that backs a Looker Studio dashboard. |
-| [realtime-data-stream](prod-projects/databricks-pipelines/realtime-data-stream) | Python, SQLAlchemy, Databricks, Grafana | Runs transport KPI queries every 5 min and pushes values to a Sheet that Grafana streams to floor TVs. |
-| [receive-booking-monthly-backup](prod-projects/databricks-pipelines/receive-booking-monthly-backup) | Python, Pandas, Databricks | Month-end snapshot of B-Beauty and ZFS overstock bookings with EAN→brand enrichment. |
-| [receive-uph-kpis](prod-projects/databricks-pipelines/receive-uph-kpis) | Python, SQLAlchemy, Databricks | Nightly units-per-hour KPIs with Berlin→UTC windowing and idempotent Sheet refresh. |
-| [shift-report-daily-update](prod-projects/databricks-pipelines/shift-report-daily-update) | Python, SQLAlchemy, Databricks | Nightly shift report; supports a date widget for backfills. |
-| [outet-booking](prod-projects/databricks-pipelines/outet-booking) | Python, SQLAlchemy, Databricks | Nightly aggregation of outlet booking data from Oracle to Google Sheets, grouped by shift, HU, category, sort, and quality. |
-| [inventory-reconciliation-sql](prod-projects/inventory-reconciliation-sql/inbound-booking-report) | Oracle SQL | Reconstructs item lifecycle from book-out/book-in pairs and de-duplicates manual-sorting scans. |
-| [sql-kitchen](prod-projects/sql-kitchen) | Oracle SQL | Reference library of standalone warehouse queries — booking variants, KPI pivots, and TGW infosystem queries. |
-| [dg-compliance-pipeline](prod-projects/looker-reporting-etl/dg-compliance-pipeline) | Databricks, Oracle, Looker Studio | Dangerous-goods volume dashboard with a "days to threshold" forecast. |
-| [qa-intelligence-engine](prod-projects/looker-reporting-etl/qa-intelligence-engine) | ETL, scoring logic | Consolidates quality audits into one weighted score for steering meetings. |
-| [kaizando-automation-appscript](internal-team-projects/kaizando-automation-appscript) | Google Apps Script | Auto-translates Kaizen ideas, posts Chat cards, sends monthly reward emails. |
-| [order-duration-efficiency-analysis](internal-team-projects/order-duration-efficiency-analysis) | Apps Script, SQL | Correlates background transport load with order processing delays. |
+- [technical-deep-dives/inventory-event-reconciliation](technical-deep-dives/inventory-event-reconciliation/) —
+  a closer look at the SQL techniques (transaction-lifecycle reconstruction,
+  JSON extraction, sequence-matched deduplication) behind the inventory data used
+  across the featured projects above.
+- [additional-work/](additional-work/) — shorter write-ups of other automation and
+  reporting work that didn't warrant a full case study.
+- [shared/logistics_data_utils](shared/logistics_data_utils/) — the shared Python
+  package the featured pipelines are built on.
 
-## Conventions
-
-These hold across every project unless a project README says otherwise.
-
-**Secrets.** Credentials are never committed. Databricks jobs read them from a
-secret scope via `dbutils.secrets.get(...)`; Apps Script reads them from Script
-Properties. Sheet IDs and dashboard URLs live in a per-project `config.json`,
-which is gitignored — commit the `config.template.json` next to it instead and
-copy it to `config.json` locally.
-
-**Databricks Asset Bundles.** Each pipeline ships a `databricks.yml` describing
-its job (schedule, cluster, libraries) and `dev`/`prod` targets. Validate and
-deploy from the project folder:
-
-```bash
-databricks bundle validate -t dev
-databricks bundle deploy   -t dev
-databricks bundle run <job_key> -t dev
-```
-
-**Shared helpers.** The Databricks jobs import `dbricks-utils/common_utils.py`
-(connections, config loading, UTC windowing, idempotent Sheet writes, Chat
-notifications). On the workspace it lives under a shared path that each job
-appends to `sys.path`; see that module and the per-job README for the exact path.
-
-**Python deps.** Each Python project lists its pinned packages in
-`requirements.txt`. The same pins are declared in `databricks.yml` so local and
-job environments match.
+See [docs/portfolio-scope.md](docs/portfolio-scope.md) for what is and isn't
+covered here, and [docs/sanitization-policy.md](docs/sanitization-policy.md) for
+exactly how identifying details were removed.
 
 ## License
 

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logistics-data-utils"
+version = "0.1.0"
+description = "Shared connection, config, sheet-write, time-window, and notification helpers for the logistics data pipeline case studies in this portfolio."
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "gspread>=6.1.0",
+    "sqlalchemy>=2.0",
+    "oracledb>=2.1.2",
+    "pytz",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

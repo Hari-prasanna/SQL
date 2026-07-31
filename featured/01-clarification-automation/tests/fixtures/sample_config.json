@@ -1,0 +1,28 @@
+{
+  "google_sheet": {
+    "sheet_id": "<TARGET_GOOGLE_SHEET_ID>",
+    "upload_tab": "auto_raw"
+  },
+  "shift_settings": {
+    "timezone": "Europe/Berlin",
+    "day_offset": 0,
+    "shifts": [
+      { "shift_number": 1, "start_time": "05:50:00", "end_time": "14:44:59" },
+      { "shift_number": 2, "start_time": "14:45:00", "end_time": "23:35:00" }
+    ]
+  },
+  "file_paths": {
+    "sql_query": "clarification_booking.sql",
+    "backlog_query": "backlog_clarification.sql"
+  },
+  "run_settings": {
+    "days_back": 0
+  },
+  "webhook_settings": {
+    "backlog_clarification": {
+      "secret_key": "backlog_clarification_webhook_url",
+      "secret_scope": "<SECRET_SCOPE>",
+      "retry_config": { "max_retries": 3, "initial_backoff_seconds": 1.0 }
+    }
+  }
+}

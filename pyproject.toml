@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = [
+    "*.ipynb",
+    "prod-projects", # excluded-from-portfolio material left untouched on disk (see docs/reorganisation-plan.md)
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "featured/01-clarification-automation/tests",
+    "featured/02-dangerous-goods-data-product/tests",
+    "featured/03-order-flow-bottleneck-analysis/tests",
+    "technical-deep-dives/inventory-event-reconciliation/tests",
+    "shared/logistics_data_utils/tests",
+]
