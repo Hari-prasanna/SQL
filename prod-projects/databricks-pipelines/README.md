@@ -14,6 +14,7 @@ They share one set of helpers and follow the same secrets and config conventions
 | `receive-uph-kpis` | 23:35 nightly, Mon–Fri | Oracle → Google Sheets | [link](receive-uph-kpis) |
 | `shift-report-daily-update` | 23:35 nightly, Mon–Fri | Oracle → Google Sheets | [link](shift-report-daily-update) |
 | `outet-booking` | 23:35, Mon–Fri | Oracle → Google Sheets (outlet booking aggregation) | [link](outet-booking) |
+| `clarification-bookings` | 14:40 & 23:40, Mon–Fri | Oracle → Google Sheets + Chat (clarification bookings + backlog alert) | [link](clarification-bookings) |
 
 ## Shared helpers — `dbricks-utils/common_utils.py`
 
